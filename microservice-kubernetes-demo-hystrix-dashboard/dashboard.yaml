@@ -1,0 +1,46 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    run: hystrix-dashboard
+  name: hystrix-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: hystrix-dashboard
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        run: hystrix-dashboard
+    spec:
+      containers:
+        - image: docker.io/bondblaze/microservice-kubernetes-demo-hystrix-dashboard:0.0.1-SNAPSHOT
+          name: hystrix-dashboard
+          ports:
+            - containerPort: 8080
+          resources: {}
+status: {}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    run: hystrix-dashboard
+  name: hystrix-dashboard
+spec:
+  ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    run: hystrix-dashboard
+  type: LoadBalancer
+status:
+  loadBalancer: {}

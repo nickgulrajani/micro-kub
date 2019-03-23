@@ -1,0 +1,42 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+            steps {
+                script {
+                    withMaven(maven:'Maven 3.6.0') {
+                        sh 'mvn clean package -Dmaven.test.skip=true'
+                        def pom = readMavenPom file:'pom.xml'
+                        print pom.version
+                        env.version = pom.version
+                    }
+                }
+            }
+        }
+
+        stage ('Image') {
+            steps {
+                script {
+                    dir ('apache') {
+                        def app = docker.build "bondblaze/microservice-kubernetes-demo-apache:${env.version}"
+                        app.push()
+                    }
+                }
+            }
+        }
+
+        stage ('Deploy to cluster') {
+            steps {
+                script {
+                    dir ('apache') {
+                        kubernetesDeploy( kubeconfigId: '232a9f07-71dc-4d00-a8ed-695c340720cf',
+                                          configs: 'apache.yaml',
+                                          enableConfigSubstitution: true
+                        )
+                    }
+                }
+            }
+        }
+    }
+}

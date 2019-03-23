@@ -1,0 +1,52 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+            steps {
+                script {
+                    withMaven(maven:'Maven 3.6.0') {
+                        sh 'mvn clean package -Dmaven.test.skip=true'
+                        def pom = readMavenPom file:'pom.xml'
+                        print pom.version
+                        env.version = pom.version
+                    }
+                }
+            }
+        }
+
+        stage('SonarQube Code analysis') {
+            steps {
+                script {
+                    withSonarQubeEnv('SonarQube Demo') {
+                        sh '/opt/sonar-scanner/bin/sonar-scanner -Dsonar.projectKey=' + 'catalog:demo' + ' -Dsonar.projectName=' + 'MicroserviceCatalog' + ' -Dsonar.projectVersion=' + '1.0' + ' -Dsonar.sources=' + 'microservice-kubernetes-demo-catalog/src' + ' -Dsonar.java.binaries=' + 'microservice-kubernetes-demo-catalog/target'
+                    }
+                }
+            }
+        }
+
+        stage ('Image') {
+            steps {
+                script {
+                    dir ('microservice-kubernetes-demo-catalog') {
+                        def app = docker.build "bondblaze/microservice-kubernetes-demo-catalog:${env.version}"
+                        app.push()
+                    }
+                }
+            }
+        }
+
+        stage ('Deploy to cluster') {
+                    steps {
+                        script {
+                            dir ('microservice-kubernetes-demo-catalog') {
+                                kubernetesDeploy( kubeconfigId: '232a9f07-71dc-4d00-a8ed-695c340720cf',
+                                                  configs: 'catalog.yaml',
+                                                  enableConfigSubstitution: true
+                                )
+                            }
+                        }
+                    }
+        }
+    }
+}
